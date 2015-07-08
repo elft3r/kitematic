@@ -55,15 +55,15 @@ var _steps = [{
   })
 }, {
   name: 'init',
-  title: 'Starting Docker VM',
-  message: 'To run Docker containers on your computer, Kitematic is starting a Linux virtual machine. This may take a minute...',
+  title: 'Starting Docker Engine',
+  message: 'To run Docker containers on your computer, Kitematic is starting a Linux host machine. This may take a minute...',
   totalPercent: 60,
   percent: 0,
   seconds: 110,
   run: Promise.coroutine(function* (progressCallback) {
     setupUtil.simulateProgress(this.seconds, progressCallback);
     var exists = yield machine.exists();
-    if (!exists || (yield machine.state()) === 'Error') {
+    if ((!exists || (yield machine.state()) === 'Error') && (yield machine.driver()) === 'virtualbox') {
       if (exists && (yield machine.state()) === 'Error') {
         yield machine.rm();
       }

@@ -5,7 +5,7 @@ var fs = require('fs');
 var util = require('./Util');
 var resources = require('./ResourcesUtil');
 
-var NAME = util.isWindows () ? 'kitematic' : 'dev';
+var NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
 
 var DockerMachine = {
   command: function () {
@@ -27,7 +27,7 @@ var DockerMachine = {
       return null;
     }
   },
-  info: function () {
+  list: function () {
     return util.exec([this.command(), 'ls']).then(stdout => {
       var lines = stdout.trim().split('\n').filter(line => line.indexOf('time=') === -1);
       var machines = {};
@@ -41,6 +41,11 @@ var DockerMachine = {
         };
         machines[machine.name] = machine;
       });
+      return Promise.resolve(machines);
+    });
+  },
+  info: function () {
+    return this.list().then(machines => {
       if (machines[NAME]) {
         return Promise.resolve(machines[NAME]);
       } else {
@@ -79,12 +84,20 @@ var DockerMachine = {
       return Promise.resolve(stdout.trim().replace('\n', ''));
     });
   },
+  updateName: function () {
+    NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
+  },
   regenerateCerts: function () {
     return util.exec([this.command(), 'tls-regenerate-certs', '-f', NAME]);
   },
   state: function () {
     return this.info().then(info => {
       return info ? info.state : null;
+    });
+  },
+  driver: function () {
+    return this.info().then(info => {
+      return info ? info.driver : null;
     });
   },
   disk: function () {
