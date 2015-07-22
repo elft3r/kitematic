@@ -10,6 +10,7 @@ import containerStore from '../stores/ContainerStore';
 import {DropdownButton, MenuItem} from 'react-bootstrap';
 import machine from '../utils/DockerMachineUtil';
 
+
 var Preferences = React.createClass({
   mixins: [Router.Navigation],
   getInitialState: function () {
