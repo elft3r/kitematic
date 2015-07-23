@@ -24,7 +24,7 @@ var Preferences = React.createClass({
   },
   render: function () {
     return (
-      <div className="preferences">
+      <div className="about">
         <div className="about-content">
           <a onClick={this.handleGoBackClick}>Go Back</a>
           <h2>Installed Software</h2>
