@@ -19,6 +19,14 @@ var Preferences = React.createClass({
     this.goBack();
     metrics.track('Went Back From Preferences');
   },
+  showPreferences: function () {
+    metrics.track('Viewed Preferences');
+    this.context.router.transitionTo('preferencesGeneral', {name: this.context.router.getCurrentParams().name});
+  },
+  showVMPreferences: function () {
+    metrics.track('Viewed VM Preferences');
+    this.context.router.transitionTo('preferencesVM', {name: this.context.router.getCurrentParams().name});
+  },
   render: function () {
     var currentRoutes = _.map(this.context.router.getCurrentRoutes(), r => r.name);
     var currentRoute = _.last(currentRoutes);
@@ -28,11 +36,7 @@ var Preferences = React.createClass({
     });
     var tabVirtualboxClasses = classNames({
       'details-tab': true,
-      'active': currentRoutes && (currentRoutes.indexOf('preferencesVirtualbox') >= 0)
-    });
-    var tabDigitaloceanClasses = classNames({
-      'details-tab': true,
-      'active': currentRoutes && (currentRoutes.indexOf('preferencesDigitalocean') >= 0)
+      'active': currentRoutes && (currentRoutes.indexOf('preferencesVM') >= 0)
     });
 
     return (
@@ -46,21 +50,8 @@ var Preferences = React.createClass({
             </div>
           </div>
           <div className="details-subheader-tabs">
-              <span className={tabPreferenceClasses}>
-                <Router.Link to="preferencesGeneral">
-                  Preferences
-                </Router.Link>
-              </span>
-              <span className={tabVirtualboxClasses}>
-                <Router.Link to="preferencesVirtualbox">
-                VirtualBox
-                </Router.Link>
-              </span>
-              <span className={tabDigitaloceanClasses}>
-                <Router.Link to="preferencesDigitalocean">
-                Digital Ocean
-                </Router.Link>
-              </span>
+              <span className={tabPreferenceClasses} onClick={this.showPreferences}>App Preferences</span>
+              <span className={tabVirtualboxClasses} onClick={this.showVMPreferences}>VM Preferences</span>
           </div>
         </div>
         <Router.RouteHandler {...this.props}/>

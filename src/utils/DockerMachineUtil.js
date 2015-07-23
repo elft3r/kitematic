@@ -37,11 +37,20 @@ var DockerMachine = {
           name: tokens[0],
           driver: tokens[1],
           state: tokens[2],
-          url: tokens[3] || ''
+          url: tokens[3] || '',
+          details: {}
         };
+        this.details(tokens[0]).then( details => {
+          machine.details = JSON.parse(details);
+        });
         machines[machine.name] = machine;
       });
       return Promise.resolve(machines);
+    });
+  },
+  details: function(name) {
+    return util.exec([this.command(), 'inspect', name]).then(stdout => {
+      return Promise.resolve(stdout.trim().replace('\n', ''));
     });
   },
   info: function () {

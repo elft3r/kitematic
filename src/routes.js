@@ -14,8 +14,8 @@ import ContainerSettingsVolumes from './components/ContainerSettingsVolumes.reac
 import ContainerSettingsAdvanced from './components/ContainerSettingsAdvanced.react';
 import Preferences from './components/Preferences.react';
 import PreferencesGeneral from './components/PreferencesGeneral.react';
-import PreferencesVirtualbox from './components/PreferencesVirtualbox.react';
-import PreferencesDigitalocean from './components/PreferencesDigitalocean.react';
+import PreferencesVM from './components/PreferencesVM.react';
+import PreferencesVMNew from './components/PreferencesVMNew.react';
 import About from './components/About.react';
 import NewContainerSearch from './components/NewContainerSearch.react';
 import NewContainerPull from './components/NewContainerPull.react';
@@ -56,8 +56,9 @@ var routes = (
       </Route>
       <Route name="preferences" path="/preferences" handler={Preferences}>
         <DefaultRoute name="preferencesGeneral" handler={PreferencesGeneral} />
-        <Route name="preferencesVirtualbox" path="/preferences/virtualbox" handler={PreferencesVirtualbox}/>
-        <Route name="preferencesDigitalocean" path="/preferences/digitalocean" handler={PreferencesDigitalocean}/>
+        <Route name="preferencesVM" path="/preferences/vm" handler={PreferencesVM}>
+          <Route name="preferencesVMNew" path="/preferences/vm/new" handler={PreferencesVMNew}/>
+        </Route>
       </Route>
       <Route name="about" path="/about" handler={About}/>
     </Route>

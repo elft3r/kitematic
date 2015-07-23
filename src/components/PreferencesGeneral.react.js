@@ -36,8 +36,8 @@ var PreferencesGeneral = React.createClass({
   },
   render: function () {
     return (
-      <div className="details-panel preferences">
-        <div className="settings">
+      <div className="details-panel">
+        <div className="settings preferences">
           <div className="settings-panel">
             <div className="settings-section">
               <div className="title">VM Settings</div>
