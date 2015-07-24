@@ -16,6 +16,7 @@ import Preferences from './components/Preferences.react';
 import PreferencesGeneral from './components/PreferencesGeneral.react';
 import PreferencesVM from './components/PreferencesVM.react';
 import PreferencesVMNew from './components/PreferencesVMNew.react';
+import PreferencesVMSettings from './components/PreferencesVMSettings.react';
 import About from './components/About.react';
 import NewContainerSearch from './components/NewContainerSearch.react';
 import NewContainerPull from './components/NewContainerPull.react';
@@ -56,9 +57,9 @@ var routes = (
       </Route>
       <Route name="preferences" path="/preferences" handler={Preferences}>
         <DefaultRoute name="preferencesGeneral" handler={PreferencesGeneral} />
-        <Route name="preferencesVM" path="/preferences/vm" handler={PreferencesVM}>
-          <Route name="preferencesVMNew" path="/preferences/vm/new" handler={PreferencesVMNew}/>
-        </Route>
+        <Route name="preferencesVM" path="/preferences/vm" handler={PreferencesVM}></Route>
+        <Route name="preferencesVMSettings" path="/preferences/vm/:name" handler={PreferencesVMSettings}/>
+        <Route name="preferencesVMNew" path="/preferences/vm/new" handler={PreferencesVMNew}/>
       </Route>
       <Route name="about" path="/about" handler={About}/>
     </Route>

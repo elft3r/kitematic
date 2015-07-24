@@ -21,11 +21,11 @@ var Preferences = React.createClass({
   },
   showPreferences: function () {
     metrics.track('Viewed Preferences');
-    this.context.router.transitionTo('preferencesGeneral', {name: this.context.router.getCurrentParams().name});
+    this.context.router.transitionTo('preferencesGeneral');
   },
   showVMPreferences: function () {
     metrics.track('Viewed VM Preferences');
-    this.context.router.transitionTo('preferencesVM', {name: this.context.router.getCurrentParams().name});
+    this.context.router.transitionTo('preferencesVM');
   },
   render: function () {
     var currentRoutes = _.map(this.context.router.getCurrentRoutes(), r => r.name);
@@ -36,7 +36,7 @@ var Preferences = React.createClass({
     });
     var tabVirtualboxClasses = classNames({
       'details-tab': true,
-      'active': currentRoutes && (currentRoutes.indexOf('preferencesVM') >= 0)
+      'active': currentRoutes && (currentRoutes.toString().match(/preferencesVM(.*)?/) !== null)
     });
 
     return (

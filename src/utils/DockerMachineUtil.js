@@ -37,26 +37,41 @@ var DockerMachine = {
           name: tokens[0],
           driver: tokens[1],
           state: tokens[2],
-          url: tokens[3] || '',
-          details: {}
+          url: tokens[3] || ''
         };
-        this.details(tokens[0]).then( details => {
-          machine.details = JSON.parse(details);
-        });
         machines[machine.name] = machine;
       });
       return Promise.resolve(machines);
     });
   },
-  details: function(name) {
-    return util.exec([this.command(), 'inspect', name]).then(stdout => {
-      return Promise.resolve(stdout.trim().replace('\n', ''));
+  details: function(machine = this.name()) {
+    return util.exec([this.command(), 'inspect', machine]).then(stdout => {
+      stdout = JSON.parse(stdout);
+      let details = {
+        driver: stdout.DriverName,
+        swarm: {
+          master: stdout.Driver.SwarmMaster,
+          host: stdout.Driver.SwarmHost,
+          discovery: stdout.Driver.SwarmDiscovery
+        }
+      }
+      let ip = this.ip(machine);
+      let state = this.state(machine);
+      let disk = this.disk(machine);
+      let memory = this.memory(machine);
+      return Promise.all([ip, state, disk, memory]).spread((ip, state, disk, memory) => {
+        details.ip = ip;
+        details.state = state;
+        details.disk = disk;
+        details.memory = memory;
+        return Promise.resolve(details);
+      });
     });
   },
-  info: function () {
+  info: function (machine = this.name()) {
     return this.list().then(machines => {
-      if (machines[NAME]) {
-        return Promise.resolve(machines[NAME]);
+      if (machines[machine]) {
+        return Promise.resolve(machines[machine]);
       } else {
         return Promise.reject(new Error('Machine does not exist.'));
       }
@@ -69,38 +84,38 @@ var DockerMachine = {
       return false;
     });
   },
-  create: function () {
+  create: function (machine = this.name()) {
     if (util.isWindows()) {
-      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', NAME]);
+      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machine]);
     } else {
-      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox' ,'--virtualbox-boot2docker-url', path.join(process.env.RESOURCES_PATH, 'boot2docker.iso'), '--virtualbox-memory', '2048', NAME]);
+      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox' ,'--virtualbox-boot2docker-url', path.join(process.env.RESOURCES_PATH, 'boot2docker.iso'), '--virtualbox-memory', '2048', machine]);
     }
   },
-  start: function () {
-    return util.exec([this.command(), '-D', 'start', NAME]);
+  start: function (machine = this.name()) {
+    return util.exec([this.command(), '-D', 'start', machine]);
   },
-  stop: function () {
-    return util.exec([this.command(), 'stop', NAME]);
+  stop: function (machine = this.name()) {
+    return util.exec([this.command(), 'stop', machine]);
   },
-  upgrade: function () {
-    return util.exec([this.command(), 'upgrade', NAME]);
+  upgrade: function (machine = this.name()) {
+    return util.exec([this.command(), 'upgrade', machine]);
   },
-  rm: function () {
-    return util.exec([this.command(), 'rm', '-f', NAME]);
+  rm: function (machine = this.name()) {
+    return util.exec([this.command(), 'rm', '-f', machine]);
   },
-  ip: function () {
-    return util.exec([this.command(), 'ip', NAME]).then(stdout => {
+  ip: function (machine = this.name()) {
+    return util.exec([this.command(), 'ip', machine]).then(stdout => {
       return Promise.resolve(stdout.trim().replace('\n', ''));
     });
   },
   updateName: function () {
     NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
   },
-  regenerateCerts: function () {
-    return util.exec([this.command(), 'tls-regenerate-certs', '-f', NAME]);
+  regenerateCerts: function (machine = this.name()) {
+    return util.exec([this.command(), 'tls-regenerate-certs', '-f', machine]);
   },
-  state: function () {
-    return this.info().then(info => {
+  state: function (machine = this.name()) {
+    return this.info(machine).then(info => {
       return info ? info.state : null;
     });
   },
@@ -109,8 +124,8 @@ var DockerMachine = {
       return info ? info.driver : null;
     });
   },
-  disk: function () {
-    return util.exec([this.command(), 'ssh', NAME, 'df']).then(stdout => {
+  disk: function (machine = this.name()) {
+    return util.exec([this.command(), 'ssh', machine, 'df']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -133,8 +148,8 @@ var DockerMachine = {
       }
     });
   },
-  memory: function () {
-    return util.exec([this.command(), 'ssh', NAME, 'free -m']).then(stdout => {
+  memory: function (machine = this.name()) {
+    return util.exec([this.command(), 'ssh', machine, 'free -m']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -159,14 +174,16 @@ var DockerMachine = {
       }
     });
   },
-  stats: function () {
-    this.state().then(state => {
+  stats: function (machine = this.name()) {
+    this.state(machine).then(state => {
       if (state === 'Stopped') {
         return Promise.resolve({state: state});
       }
-      var memory = this.memory();
-      var disk = this.disk();
+      console.log("stats launched");
+      var memory = this.memory(machine);
+      var disk = this.disk(machine);
       return Promise.all([memory, disk]).spread((memory, disk) => {
+        console.log("Sending: %o - %o",memory, disk);
         return Promise.resolve({
           memory: memory,
           disk: disk

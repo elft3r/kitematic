@@ -6,17 +6,12 @@ import _ from 'underscore';
 import utils from '../utils/Util';
 import docker from '../utils/DockerUtil';
 import SetupStore from '../stores/SetupStore';
-import containerStore from '../stores/ContainerStore';
-import {DropdownButton, MenuItem} from 'react-bootstrap';
 import machine from '../utils/DockerMachineUtil';
 import classNames from 'classnames';
 
 
 var Preferences = React.createClass({
   mixins: [Router.Navigation],
-  contextTypes: {
-    router: React.PropTypes.func
-  },
   getInitialState: function () {
     return {
       currentEngine: localStorage.getItem('settings.dockerEngine') || 'Kitematic',
@@ -31,11 +26,46 @@ var Preferences = React.createClass({
       });
     });
   },
-  handleClickVMSettings: function (index, event) {
-    metrics.track('Opened VM Settings', {
-      from: 'app'
+  updateMachine: function(name) {
+    let machines = _.clone(this.state.machines);
+    machine.state(name).then(info => {
+        machines[name].state = info;
+        console.log("VM: %o", info);
+        this.setState({
+          machines: machines
+        })
     });
-    this.context.router.transitionTo('preferencesVMSettings');
+  },
+  handleNewVM: function (event) {
+    metrics.track('New VM', {
+      from: 'VM Preferences'
+    });
+    this.transitionTo('preferencesVMNew');
+  },
+  handleClickVMSettings: function (vmName, event) {
+    metrics.track('Opened VM Settings', {
+      from: 'VM Preferences'
+    });
+    this.transitionTo('preferencesVMSettings', {name: vmName});
+  },
+  handleStartVM: function(vmName, event) {
+    metrics.track('Started VM', {
+      from: 'VM Preferences'
+    });
+    machine.start(vmName).then(status => {
+        console.log("status: %o", status);
+        this.updateMachine(vmName);
+    });
+
+  },
+  handleStopVM: function(vmName, event) {
+    metrics.track('Stopped VM', {
+      from: 'VM Preferences'
+    });
+    machine.stop(vmName).then(status => {
+        console.log("status: %o", status);
+        this.updateMachine(vmName);
+    });
   },
   // handleChangeDockerEngine: function (machineIndex, e) {
   //   localStorage.setItem('settings.dockerEngine', machineIndex);
@@ -62,7 +92,7 @@ var Preferences = React.createClass({
   //   }
   // },
   render: function () {
-    let machineList = React.addons.createFragment(_.mapObject(this.state.machines, (machine, index) => {
+    let machineList = _.map(this.state.machines, (machine, index) => {
       let menu=[];
       let machineDriver = utils.camelCase(machine.driver);
       let machineName = utils.camelCase(machine.name);
@@ -70,18 +100,18 @@ var Preferences = React.createClass({
       if (machine.state !== "Running") {
         startStopToggle = (
           <div className="action">
-            <div className="action-icon start" onClick={this.handleStartVM}><span className="icon icon-start"></span></div>
+            <div className="action-icon start" onClick={this.handleStartVM.bind(this, index)}><span className="icon icon-start"></span></div>
           </div>
         );
       } else {
         startStopToggle = (
           <div className="action">
-            <div className="action-icon stop" onClick={this.handleStopVM}><span className="icon icon-stop"></span></div>
+            <div className="action-icon stop" onClick={this.handleStopVM.bind(this, index)}><span className="icon icon-stop"></span></div>
           </div>
         );
       }
       return (
-        <tr>
+        <tr key={machine.name}>
           <td>{startStopToggle}</td>
           <td>{machine.name}</td>
           <td>{machine.state}</td>
@@ -91,7 +121,7 @@ var Preferences = React.createClass({
           <td><span className="btn-sidebar btn-preferences" onClick={this.handleClickVMSettings.bind(this, index)}><span className="icon icon-preferences"></span></span></td>
         </tr>
       );
-    }));
+    });
     let body = (
         <div className="settings-section">
           <div className="title">Machines</div>
