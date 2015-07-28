@@ -5,7 +5,7 @@ import fs from 'fs';
 import util from './Util';
 import resources from './ResourcesUtil';
 
-var NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
+var NAME = 'docker-vm';
 
 var DockerMachine = {
   command: function () {
@@ -85,11 +85,7 @@ var DockerMachine = {
     });
   },
   create: function (machine = this.name()) {
-    if (util.isWindows()) {
-      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machine]);
-    } else {
-      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox' ,'--virtualbox-boot2docker-url', path.join(process.env.RESOURCES_PATH, 'boot2docker.iso'), '--virtualbox-memory', '2048', machine]);
-    }
+    return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machine]);
   },
   start: function (machine = this.name()) {
     return util.exec([this.command(), '-D', 'start', machine]);
@@ -179,11 +175,9 @@ var DockerMachine = {
       if (state === 'Stopped') {
         return Promise.resolve({state: state});
       }
-      console.log("stats launched");
       var memory = this.memory(machine);
       var disk = this.disk(machine);
       return Promise.all([memory, disk]).spread((memory, disk) => {
-        console.log("Sending: %o - %o",memory, disk);
         return Promise.resolve({
           memory: memory,
           disk: disk
