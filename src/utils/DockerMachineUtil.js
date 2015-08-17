@@ -5,6 +5,8 @@ import fs from 'fs';
 import util from './Util';
 import resources from './ResourcesUtil';
 
+var NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
+
 var DockerMachine = {
   command: function () {
     return resources.dockerMachine();
@@ -25,7 +27,7 @@ var DockerMachine = {
       return null;
     }
   },
-  info: function (machineName = this.name()) {
+  list: function () {
     return util.exec([this.command(), 'ls']).then(stdout => {
       var lines = stdout.trim().split('\n').filter(line => line.indexOf('time=') === -1);
       var machines = {};
@@ -39,8 +41,37 @@ var DockerMachine = {
         };
         machines[machine.name] = machine;
       });
-      if (machines[machineName]) {
-        return Promise.resolve(machines[machineName]);
+      return Promise.resolve(machines);
+    });
+  },
+  details: function(machine = this.name()) {
+    return util.exec([this.command(), 'inspect', machine]).then(stdout => {
+      stdout = JSON.parse(stdout);
+      let details = {
+        driver: stdout.DriverName,
+        swarm: {
+          master: stdout.Driver.SwarmMaster,
+          host: stdout.Driver.SwarmHost,
+          discovery: stdout.Driver.SwarmDiscovery
+        }
+      }
+      let ip = this.ip(machine);
+      let state = this.state(machine);
+      let disk = this.disk(machine);
+      let memory = this.memory(machine);
+      return Promise.all([ip, state, disk, memory]).spread((ip, state, disk, memory) => {
+        details.ip = ip;
+        details.state = state;
+        details.disk = disk;
+        details.memory = memory;
+        return Promise.resolve(details);
+      });
+    });
+  },
+  info: function (machine = this.name()) {
+    return this.list().then(machines => {
+      if (machines[machine]) {
+        return Promise.resolve(machines[machine]);
       } else {
         return Promise.reject(new Error('Machine does not exist.'));
       }
@@ -53,36 +84,48 @@ var DockerMachine = {
       return false;
     });
   },
-  create: function (machineName = this.name()) {
-    return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machineName]);
+  create: function (machine = this.name()) {
+    if (util.isWindows()) {
+      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machine]);
+    } else {
+      return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox' ,'--virtualbox-boot2docker-url', path.join(process.env.RESOURCES_PATH, 'boot2docker.iso'), '--virtualbox-memory', '2048', machine]);
+    }
   },
-  start: function (machineName = this.name()) {
-    return util.exec([this.command(), '-D', 'start', machineName]);
+  start: function (machine = this.name()) {
+    return util.exec([this.command(), '-D', 'start', machine]);
   },
-  stop: function (machineName = this.name()) {
-    return util.exec([this.command(), 'stop', machineName]);
+  stop: function (machine = this.name()) {
+    return util.exec([this.command(), 'stop', machine]);
   },
-  upgrade: function (machineName = this.name()) {
-    return util.exec([this.command(), 'upgrade', machineName]);
+  upgrade: function (machine = this.name()) {
+    return util.exec([this.command(), 'upgrade', machine]);
   },
-  rm: function (machineName = this.name()) {
-    return util.exec([this.command(), 'rm', '-f', machineName]);
+  rm: function (machine = this.name()) {
+    return util.exec([this.command(), 'rm', '-f', machine]);
   },
-  ip: function (machineName = this.name()) {
-    return util.exec([this.command(), 'ip', machineName]).then(stdout => {
+  ip: function (machine = this.name()) {
+    return util.exec([this.command(), 'ip', machine]).then(stdout => {
       return Promise.resolve(stdout.trim().replace('\n', ''));
     });
   },
-  regenerateCerts: function (machineName = this.name()) {
-    return util.exec([this.command(), 'tls-regenerate-certs', '-f', machineName]);
+  updateName: function () {
+    NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
   },
-  state: function (machineName = this.name()) {
-    return this.info(machineName).then(info => {
+  regenerateCerts: function (machine = this.name()) {
+    return util.exec([this.command(), 'tls-regenerate-certs', '-f', machine]);
+  },
+  state: function (machine = this.name()) {
+    return this.info(machine).then(info => {
       return info ? info.state : null;
     });
   },
-  disk: function (machineName = this.name()) {
-    return util.exec([this.command(), 'ssh', machineName, 'df']).then(stdout => {
+  driver: function () {
+    return this.info().then(info => {
+      return info ? info.driver : null;
+    });
+  },
+  disk: function (machine = this.name()) {
+    return util.exec([this.command(), 'ssh', machine, 'df']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -105,8 +148,8 @@ var DockerMachine = {
       }
     });
   },
-  memory: function (machineName = this.name()) {
-    return util.exec([this.command(), 'ssh', machineName, 'free -m']).then(stdout => {
+  memory: function (machine = this.name()) {
+    return util.exec([this.command(), 'ssh', machine, 'free -m']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -131,14 +174,16 @@ var DockerMachine = {
       }
     });
   },
-  stats: function (machineName = this.name()) {
-    this.state(machineName).then(state => {
+  stats: function (machine = this.name()) {
+    this.state(machine).then(state => {
       if (state === 'Stopped') {
         return Promise.resolve({state: state});
       }
-      var memory = this.memory();
-      var disk = this.disk();
+      console.log("stats launched");
+      var memory = this.memory(machine);
+      var disk = this.disk(machine);
       return Promise.all([memory, disk]).spread((memory, disk) => {
+        console.log("Sending: %o - %o",memory, disk);
         return Promise.resolve({
           memory: memory,
           disk: disk

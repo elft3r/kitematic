@@ -145,6 +145,11 @@ module.exports = {
 
     return 0;
   },
+  camelCase: function (text) {
+    return text.toLowerCase().replace( /\b\w/g, function (m) {
+                return m.toUpperCase();
+            });
+  },
   randomId: function () {
     return crypto.randomBytes(32).toString('hex');
   },

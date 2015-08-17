@@ -1,19 +1,46 @@
 @import "variables.less";
 
-.preferences {
+.about {
   flex: 1 auto;
   display: flex;
   align-items: flex-start;
   justify-content: center;
 
-  .preferences-content, .about-content {
+  .about-content {
     flex: 1 auto;
-    margin-top: 45px;
+    margin-top: 0px;
     padding: 50px;
     max-width: 640px;
     display: flex;
     flex-direction: column;
-
+    h2 {
+      font-size: 3rem;
+      text-align: center;
+    }
+    .row {
+      text-align: center;
+    }
+    h3 {
+      font-size: 2rem;
+      text-align: center;
+    }
+    p {
+      color: @gray-normal;
+      font-size: 1.5rem;
+    }
+  }
+  .details-progress {
+    margin-top: 30%;
+  }
+}
+.details-header-actions {
+  .go-back {
+    margin-left: 9px;
+    margin-top: 9px;
+  }
+}
+.preferences {
+  .settings-panel {
     .title {
       margin-top: 40px;
       text-align: left;
@@ -65,6 +92,23 @@
     p {
       color: @gray-light;
       font-size: 1.5rem;
+    }
+  }
+}
+
+.virtual-machines {
+  .settings-panel {
+    position: relative;
+    .create {
+      position:absolute;
+      right: 20px;
+      top: 19px;
+    }
+    .title {
+      text-align: left;
+      font-size: 2rem;
+      font-weight: 400;
+      color: @gray-darker;
     }
   }
 }

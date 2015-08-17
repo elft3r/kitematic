@@ -1,12 +1,17 @@
 import React from 'react/addons';
 import metrics from '../utils/MetricsUtil';
 import Router from 'react-router';
+import _ from 'underscore';
+import classNames from 'classnames';
+
 
 var Preferences = React.createClass({
   mixins: [Router.Navigation],
+  contextTypes: {
+    router: React.PropTypes.func
+  },
   getInitialState: function () {
     return {
-      closeVMOnQuit: localStorage.getItem('settings.closeVMOnQuit') === 'true',
       metricsEnabled: metrics.enabled()
     };
   },
@@ -14,50 +19,42 @@ var Preferences = React.createClass({
     this.goBack();
     metrics.track('Went Back From Preferences');
   },
-  handleChangeCloseVMOnQuit: function (e) {
-    var checked = e.target.checked;
-    this.setState({
-      closeVMOnQuit: checked
-    });
-    localStorage.setItem('settings.closeVMOnQuit', checked);
-    metrics.track('Toggled Close VM On Quit', {
-      close: checked
-    });
+  showPreferences: function () {
+    metrics.track('Viewed Preferences');
+    this.context.router.transitionTo('preferencesGeneral');
   },
-  handleChangeMetricsEnabled: function (e) {
-    var checked = e.target.checked;
-    this.setState({
-      metricsEnabled: checked
-    });
-    metrics.setEnabled(checked);
-    metrics.track('Toggled util/MetricsUtil', {
-      enabled: checked
-    });
+  showVMPreferences: function () {
+    metrics.track('Viewed VM Preferences');
+    this.context.router.transitionTo('preferencesVM');
   },
   render: function () {
+    var currentRoutes = _.map(this.context.router.getCurrentRoutes(), r => r.name);
+    var currentRoute = _.last(currentRoutes);
+    var tabPreferenceClasses = classNames({
+      'details-tab': true,
+      'active': currentRoute === 'preferencesGeneral'
+    });
+    var tabVirtualboxClasses = classNames({
+      'details-tab': true,
+      'active': currentRoutes && (currentRoutes.toString().match(/preferencesVM(.*)?/) !== null)
+    });
+
     return (
-      <div className="preferences">
-        <div className="preferences-content">
-          <a onClick={this.handleGoBackClick}>Go Back</a>
-          <div className="title">VM Settings</div>
-          <div className="option">
-            <div className="option-name">
-              Shutdown Linux VM on closing Kitematic
-            </div>
-            <div className="option-value">
-              <input type="checkbox" checked={this.state.closeVMOnQuit} onChange={this.handleChangeCloseVMOnQuit}/>
+      <div className="details">
+        <div className="details-subheader">
+          <div className="details-header-actions">
+            <div className="go-back">
+              <a onClick={this.handleGoBackClick}>
+              <span className="btn btn-new btn-action has-icon btn-hollow">Go Back</span>
+              </a>
             </div>
           </div>
-          <div className="title">App Settings</div>
-          <div className="option">
-            <div className="option-name">
-              Report anonymous usage analytics
-            </div>
-            <div className="option-value">
-              <input type="checkbox" checked={this.state.metricsEnabled} onChange={this.handleChangeMetricsEnabled}/>
-            </div>
+          <div className="details-subheader-tabs">
+              <span className={tabPreferenceClasses} onClick={this.showPreferences}>App Preferences</span>
+              <span className={tabVirtualboxClasses} onClick={this.showVMPreferences}>VM Preferences</span>
           </div>
         </div>
+        <Router.RouteHandler {...this.props}/>
       </div>
     );
   }
