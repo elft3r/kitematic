@@ -67,37 +67,36 @@ var Preferences = React.createClass({
         this.updateMachine(vmName);
     });
   },
-  // handleChangeDockerEngine: function (machineIndex, e) {
-  //   localStorage.setItem('settings.dockerEngine', machineIndex);
-  //   if (this.state.currentEngine != machineIndex) {
-  //     this.setState({
-  //       currentEngine: machineIndex,
-  //       engineChange: true
-  //     });
-  //     machine.updateName();
-  //     SetupStore.setup().then(() => {
-  //       docker.init();
-  //       this.transitionTo('search');
-  //     }).catch(err => {
-  //       this.setState({
-  //         engineChange: false
-  //       });
-  //       metrics.track('Setup New Docker Failed', {
-  //         step: 'catch',
-  //         message: err.message
-  //       });
-  //       throw err;
-  //     });
-  //
-  //   }
-  // },
+  handleChangeDockerEngine: function (machineIndex, e) {
+    localStorage.setItem('settings.dockerEngine', machineIndex);
+    if (this.state.currentEngine != machineIndex) {
+      this.setState({
+        currentEngine: machineIndex,
+        engineChange: true
+      });
+      machine.updateName(machineIndex);
+      SetupStore.setup().then(() => {
+        docker.init();
+        this.transitionTo('search');
+      }).catch(err => {
+        this.setState({
+          engineChange: false
+        });
+        metrics.track('Setup New Docker Failed', {
+          step: 'catch',
+          message: err.message
+        });
+        throw err;
+      });
+    }
+  },
   render: function () {
-    let machineList = _.map(this.state.machines, (machine, index) => {
+    let machineList = _.map(this.state.machines, (m, index) => {
       let menu=[];
-      let machineDriver = utils.camelCase(machine.driver);
-      let machineName = utils.camelCase(machine.name);
+      let machineDriver = utils.camelCase(m.driver);
+      let machineName = utils.camelCase(m.name);
       let startStopToggle;
-      if (machine.state !== "Running") {
+      if (m.state !== "Running") {
         startStopToggle = (
           <div className="action">
             <div className="action-icon start" onClick={this.handleStartVM.bind(this, index)}><span className="icon icon-start"></span></div>
@@ -110,14 +109,31 @@ var Preferences = React.createClass({
           </div>
         );
       }
+	  // change the machine
+      let activateMachine;
+      if (machine.name() !== m.name) {
+        activateMachine = (
+          <div className="active">
+            <a onClick={this.handleChangeDockerEngine.bind(this, index)}>
+              <span className="btn btn-new btn-action has-icon btn-hollow">SELECT</span>
+            </a>
+          </div>
+        );
+      } else {
+        activateMachine = (
+          <div className="action">
+            <div className="action-icon stop" onClick={this.handleChangeDockerEngine.bind(this, index)}>ACTIVE</div>
+          </div>
+        );
+      }
       return (
-        <tr key={machine.name}>
+        <tr key={m.name}>
           <td>{startStopToggle}</td>
-          <td>{machine.name}</td>
-          <td>{machine.state}</td>
-          <td>{utils.camelCase(machine.driver)}</td>
-          <td>{machine.url}</td>
-          <td>Active</td>
+          <td>{m.name}</td>
+          <td>{m.state}</td>
+          <td>{utils.camelCase(m.driver)}</td>
+          <td>{m.url}</td>
+          <td>{activateMachine}</td>
           <td><span className="btn-sidebar btn-preferences" onClick={this.handleClickVMSettings.bind(this, index)}><span className="icon icon-preferences"></span></span></td>
         </tr>
       );
@@ -138,7 +154,7 @@ var Preferences = React.createClass({
                 <th>Status</th>
                 <th>Driver</th>
                 <th>Url</th>
-                <th>&nbsp;</th>
+                <th>Status</th>
                 <th>&nbsp;</th>
               </tr>
             </thead>
