@@ -5,18 +5,16 @@ import fs from 'fs';
 import util from './Util';
 import resources from './ResourcesUtil';
 
-var NAME = 'docker-vm';
-
 var DockerMachine = {
   command: function () {
     return resources.dockerMachine();
   },
   name: function () {
-    return NAME;
+    return 'default';
   },
-  isoversion: function () {
+  isoversion: function (machineName = this.name()) {
     try {
-      var data = fs.readFileSync(path.join(util.home(), '.docker', 'machine', 'machines', NAME, 'boot2docker.iso'), 'utf8');
+      var data = fs.readFileSync(path.join(util.home(), '.docker', 'machine', 'machines', machineName, 'boot2docker.iso'), 'utf8');
       var match = data.match(/Boot2Docker-v(\d+\.\d+\.\d+)/);
       if (match) {
         return match[1];
@@ -44,8 +42,8 @@ var DockerMachine = {
       return Promise.resolve(machines);
     });
   },
-  details: function(machine = this.name()) {
-    return util.exec([this.command(), 'inspect', machine]).then(stdout => {
+  details: function(machineName = this.name()) {
+    return util.exec([this.command(), 'inspect', machineName]).then(stdout => {
       stdout = JSON.parse(stdout);
       let details = {
         driver: stdout.DriverName,
@@ -55,10 +53,10 @@ var DockerMachine = {
           discovery: stdout.Driver.SwarmDiscovery
         }
       }
-      let ip = this.ip(machine);
-      let state = this.state(machine);
-      let disk = this.disk(machine);
-      let memory = this.memory(machine);
+      let ip = this.ip(machineName);
+      let state = this.state(machineName);
+      let disk = this.disk(machineName);
+      let memory = this.memory(machineName);
       return Promise.all([ip, state, disk, memory]).spread((ip, state, disk, memory) => {
         details.ip = ip;
         details.state = state;
@@ -68,60 +66,64 @@ var DockerMachine = {
       });
     });
   },
-  info: function (machine = this.name()) {
-    return this.list().then(machines => {
-      if (machines[machine]) {
-        return Promise.resolve(machines[machine]);
+  info: function (machineName = this.name()) {
+    return util.exec([this.command(), 'ls']).then(stdout => {
+      var lines = stdout.trim().split('\n').filter(line => line.indexOf('time=') === -1);
+      var machines = {};
+      lines.slice(1, lines.length).forEach(line => {
+        var tokens = line.trim().split(/[\s]+/).filter(token => token !== '*');
+        var machine = {
+          name: tokens[0],
+          driver: tokens[1],
+          state: tokens[2],
+          url: tokens[3] || ''
+        };
+        machines[machine.name] = machine;
+      });
+      if (machines[machineName]) {
+        return Promise.resolve(machines[machineName]);
       } else {
         return Promise.reject(new Error('Machine does not exist.'));
       }
     });
   },
-  exists: function () {
-    return this.info().then(() => {
+  exists: function (machineName = this.name()) {
+    return this.info(machineName).then(() => {
       return true;
     }).catch(() => {
       return false;
     });
   },
-  create: function (machine = this.name()) {
-    return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machine]);
+  create: function (machineName = this.name()) {
+    return util.exec([this.command(), '-D', 'create', '-d', 'virtualbox', '--virtualbox-memory', '2048', machineName]);
   },
-  start: function (machine = this.name()) {
-    return util.exec([this.command(), '-D', 'start', machine]);
+  start: function (machineName = this.name()) {
+    return util.exec([this.command(), '-D', 'start', machineName]);
   },
-  stop: function (machine = this.name()) {
-    return util.exec([this.command(), 'stop', machine]);
+  stop: function (machineName = this.name()) {
+    return util.exec([this.command(), 'stop', machineName]);
   },
-  upgrade: function (machine = this.name()) {
-    return util.exec([this.command(), 'upgrade', machine]);
+  upgrade: function (machineName = this.name()) {
+    return util.exec([this.command(), 'upgrade', machineName]);
   },
-  rm: function (machine = this.name()) {
-    return util.exec([this.command(), 'rm', '-f', machine]);
+  rm: function (machineName = this.name()) {
+    return util.exec([this.command(), 'rm', '-f', machineName]);
   },
-  ip: function (machine = this.name()) {
-    return util.exec([this.command(), 'ip', machine]).then(stdout => {
+  ip: function (machineName = this.name()) {
+    return util.exec([this.command(), 'ip', machineName]).then(stdout => {
       return Promise.resolve(stdout.trim().replace('\n', ''));
     });
   },
-  updateName: function () {
-    NAME = localStorage.getItem('settings.dockerEngine') || (util.isWindows () ? 'kitematic' : 'dev');
+  regenerateCerts: function (machineName = this.name()) {
+    return util.exec([this.command(), 'tls-regenerate-certs', '-f', machineName]);
   },
-  regenerateCerts: function (machine = this.name()) {
-    return util.exec([this.command(), 'tls-regenerate-certs', '-f', machine]);
-  },
-  state: function (machine = this.name()) {
-    return this.info(machine).then(info => {
+  state: function (machineName = this.name()) {
+    return this.info(machineName).then(info => {
       return info ? info.state : null;
     });
   },
-  driver: function () {
-    return this.info().then(info => {
-      return info ? info.driver : null;
-    });
-  },
-  disk: function (machine = this.name()) {
-    return util.exec([this.command(), 'ssh', machine, 'df']).then(stdout => {
+  disk: function (machineName = this.name()) {
+    return util.exec([this.command(), 'ssh', machineName, 'df']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -144,8 +146,8 @@ var DockerMachine = {
       }
     });
   },
-  memory: function (machine = this.name()) {
-    return util.exec([this.command(), 'ssh', machine, 'free -m']).then(stdout => {
+  memory: function (machineName = this.name()) {
+    return util.exec([this.command(), 'ssh', machineName, 'free -m']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {
@@ -170,13 +172,13 @@ var DockerMachine = {
       }
     });
   },
-  stats: function (machine = this.name()) {
-    this.state(machine).then(state => {
+  stats: function (machineName = this.name()) {
+    this.state(machineName).then(state => {
       if (state === 'Stopped') {
         return Promise.resolve({state: state});
       }
-      var memory = this.memory(machine);
-      var disk = this.disk(machine);
+      var memory = this.memory();
+      var disk = this.disk();
       return Promise.all([memory, disk]).spread((memory, disk) => {
         return Promise.resolve({
           memory: memory,
@@ -185,10 +187,10 @@ var DockerMachine = {
       });
     });
   },
-  dockerTerminal: function (cmd) {
+  dockerTerminal: function (cmd, machineName = this.name()) {
     if(util.isWindows()) {
       cmd = cmd || '';
-      this.info().then(machine => {
+      this.info(machineName).then(machine => {
         util.exec('start powershell.exe ' + cmd,
           {env: {
             'DOCKER_HOST' : machine.url,
@@ -199,7 +201,7 @@ var DockerMachine = {
       });
     } else {
       cmd = cmd || process.env.SHELL;
-      this.info().then(machine => {
+      this.info(machineName).then(machine => {
         util.exec([resources.terminal(), `DOCKER_HOST=${machine.url} DOCKER_CERT_PATH=${path.join(util.home(), '.docker/machine/machines/' + machine.name)} DOCKER_TLS_VERIFY=1 ${cmd}`]).then(() => {});
       });
     }
