@@ -51,7 +51,7 @@ var Preferences = React.createClass({
         <div className="settings">
           <div className="settings-panel">
             <div className="settings-section">
-              <h3>Machine settings for {this.state.name}</h3>
+              <h3>Machine settings for '{this.state.name}'</h3>
               <table className="table">
               <tbody>
                 {details}

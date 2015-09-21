@@ -10,7 +10,7 @@ var DockerMachine = {
     return resources.dockerMachine();
   },
   name: function () {
-    return 'default';
+    return localStorage.getItem('settings.dockerEngine') || 'default';
   },
   isoversion: function (machineName = this.name()) {
     try {
@@ -48,6 +48,7 @@ var DockerMachine = {
       let details = {
         driver: stdout.DriverName,
         swarm: {
+          is_swarm: stdout.HostOptions.SwarmOptions.IsSwarm,
           master: stdout.Driver.SwarmMaster,
           host: stdout.Driver.SwarmHost,
           discovery: stdout.Driver.SwarmDiscovery
@@ -123,7 +124,7 @@ var DockerMachine = {
     });
   },
   disk: function (machineName = this.name()) {
-    return util.exec([this.command(), 'ssh', machineName, 'df']).then(stdout => {
+    return util.exec([this.command(), 'ssh', machineName, 'sudo', 'df']).then(stdout => {
       try {
         var lines = stdout.split('\n');
         var dataline = _.find(lines, function (line) {

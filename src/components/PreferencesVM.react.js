@@ -53,7 +53,7 @@ var Preferences = React.createClass({
       from: 'VM Preferences'
     });
     machine.start(vmName).then(status => {
-        console.log("status: %o", status);
+        console.log("status: " + status);
         this.updateMachine(vmName);
     });
 
@@ -63,20 +63,26 @@ var Preferences = React.createClass({
       from: 'VM Preferences'
     });
     machine.stop(vmName).then(status => {
-        console.log("status: %o", status);
+        console.log("status: " + status);
         this.updateMachine(vmName);
     });
   },
-  handleChangeDockerEngine: function (machineIndex, e) {
+  handleChangeDockerEngine: function (machineIndex, event) {
+    console.log("change to docker-machine: " + machineIndex);
+
+    // store the selected engine
     localStorage.setItem('settings.dockerEngine', machineIndex);
+
+    // store the state on this component
     if (this.state.currentEngine != machineIndex) {
-      this.setState({
-        currentEngine: machineIndex,
-        engineChange: true
-      });
-      machine.updateName(machineIndex);
       SetupStore.setup().then(() => {
         docker.init();
+
+        // update the view when we have changed it
+        this.setState({
+          currentEngine: machineIndex,
+          engineChange: true
+        });
         this.transitionTo('search');
       }).catch(err => {
         this.setState({
@@ -109,7 +115,7 @@ var Preferences = React.createClass({
           </div>
         );
       }
-	  // change the machine
+      // change the machine
       let activateMachine;
       if (machine.name() !== m.name) {
         activateMachine = (
@@ -122,9 +128,20 @@ var Preferences = React.createClass({
       } else {
         activateMachine = (
           <div className="action">
-            <div className="action-icon stop" onClick={this.handleChangeDockerEngine.bind(this, index)}>ACTIVE</div>
+            <div className="action-icon stop">ACTIVE</div>
           </div>
         );
+      }
+      // only show preferences icon, when the machine is up and running
+      let vmPreferences;
+      if (m.state === "Running") {
+        vmPreferences = (
+          <span className="btn-sidebar btn-preferences" onClick={this.handleClickVMSettings.bind(this, index)}><span className="icon icon-preferences"></span></span>
+        )
+      } else {
+        vmPreferences = (
+          <span>&nbsp;</span>
+        )
       }
       return (
         <tr key={m.name}>
@@ -134,18 +151,20 @@ var Preferences = React.createClass({
           <td>{utils.camelCase(m.driver)}</td>
           <td>{m.url}</td>
           <td>{activateMachine}</td>
-          <td><span className="btn-sidebar btn-preferences" onClick={this.handleClickVMSettings.bind(this, index)}><span className="icon icon-preferences"></span></span></td>
+ {/*}         <td>{vmPreferences}</td> {*/}
         </tr>
       );
     });
     let body = (
         <div className="settings-section">
           <div className="title">Machines</div>
+{/*}
           <div className="create">
             <a onClick={this.handleNewVM}>
               <span className="btn btn-new btn-action has-icon btn-hollow">New</span>
             </a>
           </div>
+{*/}
           <table className="table table-striped">
             <thead>
               <tr>
